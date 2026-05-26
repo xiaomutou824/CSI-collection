@@ -1,0 +1,34 @@
+menu "CSI Collection Configuration"
+
+    config CSI_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+        help
+            2.4 GHz Wi-Fi SSID used by ESP32-S3 station mode.
+
+    config CSI_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+        help
+            Password for the configured Wi-Fi SSID.
+
+    config CSI_NODE_ID
+        int "Node ID"
+        range 1 255
+        default 1
+        help
+            Unique node ID printed in every CSI CSV row.
+
+    config CSI_PRINT_RAW_IQ
+        bool "Print raw CSI I/Q bytes"
+        default y
+        help
+            Print all raw signed CSI bytes after metadata columns.
+
+    config CSI_OUTPUT_BAUD_RATE
+        int "Recommended serial monitor baud rate"
+        default 921600
+        help
+            Informational only. Configure the real UART baud rate in ESP System Settings.
+
+endmenu

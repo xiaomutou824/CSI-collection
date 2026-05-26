@@ -1,0 +1,8 @@
+build/
+managed_components/
+dependencies.lock
+data/*.csv
+figures/*.png
+__pycache__/
+*.pyc
+.DS_Store
