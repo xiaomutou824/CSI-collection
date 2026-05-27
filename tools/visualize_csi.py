@@ -41,22 +41,36 @@ def parse_iq_bytes(raw: str) -> np.ndarray:
     return np.sqrt(values[0::2] * values[0::2] + values[1::2] * values[1::2])
 
 
+def parse_float(raw: str) -> float | None:
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def load_csi_csv(
     csv_file: pathlib.Path,
     max_frames: int,
     expected_iq_pairs: int,
-) -> tuple[np.ndarray, np.ndarray, int, int]:
+) -> tuple[np.ndarray, np.ndarray, int, int, int]:
     amplitudes = []
     rssi_values = []
+    malformed = 0
 
     with csv_file.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            rssi = parse_float(row.get("rssi", ""))
+            if row.get("type") != "CSI_DATA" or rssi is None:
+                malformed += 1
+                continue
+
             amp = parse_iq_bytes(row.get("csi_raw_bytes", ""))
             if amp.size == 0:
+                malformed += 1
                 continue
             amplitudes.append(amp)
-            rssi_values.append(float(row.get("rssi", "nan")))
+            rssi_values.append(rssi)
             if max_frames > 0 and len(amplitudes) >= max_frames:
                 break
 
@@ -77,7 +91,7 @@ def load_csi_csv(
 
     amp_matrix = np.vstack([amp for amp, _ in filtered])
     filtered_rssi = np.asarray([rssi for _, rssi in filtered], dtype=np.float32)
-    return amp_matrix, filtered_rssi, target_len, len(amplitudes) - len(filtered)
+    return amp_matrix, filtered_rssi, target_len, len(amplitudes) - len(filtered), malformed
 
 
 def save_heatmap(amp_matrix: np.ndarray, out_path: pathlib.Path, title: str) -> None:
@@ -131,7 +145,7 @@ def main() -> int:
     out_dir = pathlib.Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    amp_matrix, rssi_values, target_len, dropped = load_csi_csv(
+    amp_matrix, rssi_values, target_len, dropped, malformed = load_csi_csv(
         csv_file, args.max_frames, args.expected_iq_pairs
     )
 
@@ -152,6 +166,7 @@ def main() -> int:
     print(f"Subcarriers/IQ pairs: {amp_matrix.shape[1]}")
     print(f"Kept I/Q pairs length: {target_len}")
     print(f"Dropped malformed/length-mismatch frames: {dropped}")
+    print(f"Skipped malformed CSV rows: {malformed}")
     print(f"Saved: {heatmap_path}")
     print(f"Saved: {curve_path}")
     print(f"Saved: {rssi_path}")

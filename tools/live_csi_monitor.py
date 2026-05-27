@@ -13,10 +13,14 @@ import serial
 
 
 HEADER = [
-    "type", "node_id", "seq", "local_time_us", "rssi", "channel",
-    "secondary_channel", "rate", "sig_mode", "mcs", "cwb", "stbc", "sgi",
-    "noise_floor", "ant", "sig_len", "rx_state", "csi_len",
+    "type", "node_id", "seq", "local_time_us", "rx_timestamp_us",
+    "src_mac", "dst_mac", "first_word_invalid", "rx_seq", "payload_len",
+    "rssi", "channel", "secondary_channel", "rate", "sig_mode", "mcs",
+    "cwb", "stbc", "sgi", "noise_floor", "ant", "sig_len", "rx_state",
+    "csi_len",
 ]
+
+RSSI_INDEX = HEADER.index("rssi")
 
 
 def parse_args() -> argparse.Namespace:
@@ -156,7 +160,7 @@ def main() -> int:
                     continue
 
                 rows += 1
-                rssi = float(meta[4])
+                rssi = float(meta[RSSI_INDEX])
 
                 if writer is not None:
                     writer.writerow([

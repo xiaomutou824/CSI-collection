@@ -19,6 +19,97 @@ menu "CSI Collection Configuration"
         help
             Unique node ID printed in every CSI CSV row.
 
+    choice CSI_MODE
+        prompt "CSI capture mode"
+        default CSI_MODE_MERGED_STABLE
+        help
+            Select which Wi-Fi training fields are exported as CSI data.
+
+        config CSI_MODE_RAW_HTLTF
+            bool "raw_htltf: raw HT-LTF only"
+            help
+                Capture only HT-LTF and disable CSI smoothing/merging. This
+                preserves more raw detail but depends on HT packets being present.
+
+        config CSI_MODE_ROUTER_COMPATIBLE_LLTF
+            bool "router_compatible_lltf: LLTF for ordinary AP/router capture"
+            help
+                Capture LLTF only and enable smoothing/scaling. This is the most
+                compatible mode for ordinary infrastructure Wi-Fi capture.
+
+        config CSI_MODE_MERGED_STABLE
+            bool "merged_stable: LLTF + HT-LTF merged and smoothed"
+            help
+                Capture LLTF and HT-LTF with merging/filtering enabled. This is
+                a good default for motion sensing datasets.
+
+        config CSI_MODE_RESEARCH_FULL
+            bool "research_full: all LTF fields, minimal internal processing"
+            help
+                Capture all available LTF fields without merging/filtering. Use
+                this for CSI format exploration and offline cleaning.
+    endchoice
+
+    config CSI_FILTER_AP_BSSID
+        bool "Only print CSI frames from the connected AP BSSID"
+        default y
+        help
+            Filter CSI rows to packets whose source MAC is the connected AP BSSID.
+            Disable this when deliberately capturing packets from all transmitters.
+
+    config CSI_FILTER_STA_DST_MAC
+        bool "Only print CSI frames addressed to this ESP32 station"
+        default y
+        help
+            Filter out AP broadcast/multicast/control frames by requiring the
+            destination MAC to match this ESP32 station MAC.
+
+    config CSI_FILTER_HT_FRAMES
+        bool "Only print HT 802.11n CSI frames"
+        default y
+        help
+            Filter out legacy non-HT frames such as AP broadcast/management
+            traffic. This keeps RSSI and CSI rows focused on self-ping replies.
+
+    config CSI_ENABLE_SELF_PING
+        bool "Generate CSI traffic by pinging the gateway from the ESP32"
+        default y
+        help
+            Start an internal ICMP ping task after Wi-Fi connects. This removes
+            the need to keep a PC terminal pinging the ESP32 during capture.
+
+    config CSI_SELF_PING_RATE_HZ
+        int "Internal gateway ping rate in Hz"
+        range 1 100
+        default 50
+        depends on CSI_ENABLE_SELF_PING
+        help
+            ICMP echo request rate used to generate CSI packets from the AP.
+
+    config CSI_SELF_PING_PAYLOAD_BYTES
+        int "Internal ping payload size in bytes"
+        range 8 1472
+        default 32
+        depends on CSI_ENABLE_SELF_PING
+        help
+            Payload bytes in each ICMP echo request.
+
+    config CSI_SELF_PING_TIMEOUT_MS
+        int "Internal ping timeout in milliseconds"
+        range 10 5000
+        default 100
+        depends on CSI_ENABLE_SELF_PING
+        help
+            Timeout for each ICMP echo request. Keep this near or below the
+            ping interval for stable high-rate capture.
+
+    config CSI_STATS_INTERVAL_SEC
+        int "CSI statistics log interval in seconds"
+        range 1 60
+        default 5
+        help
+            Print runtime CSI/ping counters at this interval.
+
     config CSI_PRINT_RAW_IQ
         bool "Print raw CSI I/Q bytes"
         default y

@@ -35,7 +35,20 @@ idf.py menuconfig
 Wi-Fi SSID
 Wi-Fi password
 Node ID
+CSI capture mode
+Only print CSI frames from the connected AP BSSID
+Only print CSI frames addressed to this ESP32 station
+Only print HT 802.11n CSI frames
+Generate CSI traffic by pinging the gateway from the ESP32
+Internal gateway ping rate in Hz
 ```
+
+默认 CSI 模式是 `merged_stable`，适合动作/存在检测这类稳定采集。普通路由器环境不稳定时可以试
+`router_compatible_lltf`；需要看更原始 HT-LTF 时用 `raw_htltf`；探索不同 LTF 字段和 CSI 长度时用
+`research_full`。默认开启 AP BSSID 过滤，只保存来自当前连接 AP 的 CSI 帧，减少其它设备包混入。
+同时默认只保留发给本机 STA MAC 的 HT 数据帧，过滤 AP 广播/组播/管理帧，避免 RSSI 曲线出现这类非
+ping 回复造成的尖峰。
+默认也会由 ESP32 自己以 50 Hz ping 网关来产生下行 CSI，因此通常不再需要电脑端持续 ping。
 
 本工程默认用 Custom UART0，波特率 `921600`：
 
@@ -58,7 +71,15 @@ idf.py -b 921600 monitor
 
 ## 产生 CSI 数据
 
-ESP32-S3 只有收到 Wi-Fi 包才会触发 CSI 回调。看到板子 IP 后，在另一个终端持续 ping：
+ESP32-S3 只有收到 Wi-Fi 包才会触发 CSI 回调。默认固件会自动 ping 网关来产生 CSI。串口日志中看到
+下面这种信息就说明内部 ping 已启动：
+
+```text
+Internal gateway ping started: target=192.168.3.1, rate=50 Hz
+CSI stats: fps=49.8, rows=500, callbacks=...
+```
+
+如果在 menuconfig 中关闭了内部 ping，可以看到板子 IP 后，在另一个终端手动持续 ping：
 
 ```bash
 ping -i 0.02 192.168.3.19
@@ -111,6 +132,9 @@ python3 tools/inspect_csi_settings.py data/node1_idle_xxx.csv
 
 ```text
 Approx. CSI frame rate: 20-50 fps 或更高
+CSI stats: 固件运行时打印的实际 CSI fps 和过滤/跳序统计
+Source MACs: 大多数应为当前 AP BSSID
+First word invalid: 记录是否需要在后处理时忽略前 4 个 CSI 字节
 CSI length bytes: 128 bytes
 I/Q pairs parsed: 64 pairs 占大多数
 Wi-Fi primary channels: 1-13

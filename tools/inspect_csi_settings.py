@@ -74,6 +74,12 @@ def main() -> int:
     print(f"Frames: {len(rows)}")
     describe_counter("Labels", [row.get("label", "") for row in rows])
     describe_counter("Node IDs", [row.get("node_id", "") for row in rows])
+    describe_counter("Source MACs", [row.get("src_mac", "") for row in rows])
+    describe_counter("Destination MACs", [row.get("dst_mac", "") for row in rows])
+    describe_counter(
+        "First word invalid",
+        [as_int(row.get("first_word_invalid", "")) for row in rows],
+    )
     describe_counter("Wi-Fi primary channels", [as_int(row.get("channel", "")) for row in rows])
     describe_counter("Secondary channel field", [as_int(row.get("secondary_channel", "")) for row in rows])
     describe_counter("CSI length bytes", [as_int(row.get("csi_len", "")) for row in rows], " bytes")
@@ -83,6 +89,12 @@ def main() -> int:
     describe_counter("rate field", [as_int(row.get("rate", "")) for row in rows])
     describe_counter("mcs field", [as_int(row.get("mcs", "")) for row in rows])
     describe_numeric("RSSI", [as_float(row.get("rssi", "")) for row in rows], " dBm")
+
+    rx_seq = [as_int(row.get("rx_seq", "")) for row in rows]
+    rx_seq = [value for value in rx_seq if value is not None]
+    if len(rx_seq) > 1:
+        gaps = sum(1 for prev, curr in zip(rx_seq, rx_seq[1:]) if curr != ((prev + 1) & 0x0FFF))
+        print(f"RX sequence discontinuities: {gaps}")
 
     time_arr = np.asarray([as_float(row.get("local_time_us", "")) for row in rows], dtype=np.float64)
     time_arr = time_arr[~np.isnan(time_arr)]
@@ -102,6 +114,7 @@ def main() -> int:
     print("- cwb=0 commonly indicates 20 MHz bandwidth; stable CSI work usually prefers 20 MHz.")
     print("- RSSI around -35 to -65 dBm is a comfortable starting range.")
     print("- If frame interval is about 1000 ms, your ping rate is too low for motion sensing.")
+    print("- If first_word_invalid=1, ignore the first four raw CSI bytes during feature extraction.")
     return 0
 
 
